@@ -10,6 +10,8 @@ export WHITE='\033[1;37m'
 export RESETCOLOR='\033[1;00m'
 
 declare -a dir_pending
+header="Accept: text/html"
+user_agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10.8; rv:21.0) Gecko/20100101 Firefox/21.0"
 
 function banner() {
 	echo -ne "$YELLOW"
@@ -22,24 +24,26 @@ function banner() {
 	echo -e "$RESETCOLOR"
 }
 
-function input() {
+function init() {
 	echo -ne "$CYAN Enter URL to download: $WHITE"
 	read root
 	echo -ne "$CYAN Enter folder name to save data in: $WHITE"
 	read folder
-	init
+	root_dir=$(pwd)'/'$folder
+	dir_exist_check $root_dir
+	if [ "$dir_exist" = false ]; then
+		mkdir $root_dir && cd $root_dir
+	else
+		cd $root_dir
+	fi
 }
 
-function init() {
-	root_dir=$(pwd)'/'$folder
-	mkdir $root_dir && cd $root_dir
-}
 
 function spinner() {
 	sp=('.   ' '..  ' '... ' '....' ' ...' '  ..' '   .' '  ..' ' ...' '....' '... ' '..  ' '.   ')
 	pid=$!
-	while kill -0 $pid 2> /dev/null;
-	do	
+	while kill -0 $pid 2> /dev/null; 
+	do
 		x=0
 		for ch in ${sp[@]}
 		do
@@ -54,29 +58,41 @@ function spinner() {
 function spaces() {
 	name=$1
 	len=${#name}
-	if [ $len -lt 19 ]; then
+	if [ $len -lt 22 ]; then
+		tabs='\t\t\t\t\t\t'
+	elif [ $len -gt 21 ] && [ $len -lt 31 ] ; then
 		tabs='\t\t\t\t\t'
-	elif [ $len -gt 18 ] && [ $len -lt 26 ]; then
+	elif [ $len -gt 30 ] && [ $len -lt 38 ]; then
 		tabs='\t\t\t\t'
-	elif [ $len -gt 25 ] && [ $len -lt 33 ]; then
+	elif [ $len -gt 37 ] && [ $len -lt 47 ]; then
 		tabs='\t\t\t'
-	elif [ $len -gt 32 ] && [ $len -lt 38 ]; then
+	elif [ $len -gt 46 ] && [ $len -lt 55 ]; then
 		tabs='\t\t'
-	elif [ $len -gt 37 ] && [ $len -lt 40 ]; then
+	elif [ $len -gt 54 ] && [ $len -lt 62 ]; then
 		tabs='\t'	
 	else
 		tabs=''
 	fi
 }
 
-function download_dir() {
-	echo
-	spaces $1
-	echo -e -n "$WHITE Getting info: $MAGENTA$1$tabs  "
-	wget -q $1'/' &
-	spinner
-	if [ -e 'index.html' ]
-	then
+function dir_exist_check() {
+	if [ -d "$1" ]; then
+		dir_exist=true
+	else
+		dir_exist=false
+	fi
+}
+
+function file_exist_check() {
+	if [ -e "$1" ]; then
+		file_exist=true
+	else
+		file_exist=false
+	fi
+}
+
+function display_ok() {
+	if [ -e "$1" ]; then
 		echo -e "$BLUE [ $GREEN OK $BLUE ] $RESETCOLOR"
 	else
 		echo -e "$BLUE [$RED Failed $BLUE] $RESETCOLOR"
@@ -84,48 +100,65 @@ function download_dir() {
 }
 
 main() {
-	download_dir $root$1
+	echo
+	url=$root$1
+	spaces "Getting info: $url"
+	echo -e -n "$WHITE Getting info: $MAGENTA$url$tabs  "
+	file_exist_check "index.html"
+	if [ "$file_exist" = false ]; then 
+		wget -q --header=$header --user-agent=$user_agent $url &
+		spinner
+	fi
+	display_ok "index.html"
 	list=($(grep "href=" index.html | cut -d '"' -f 2))
-
-	for i in "${list[@]}"
-	do
-		if [ $i != '../' ]
-		then
-			if [[ $i == */ ]]
-			then
+	for i in "${list[@]}"; do
+		if [ $i != '../' ]; then
+			if [[ $i == */ ]] && [[ $i != /* ]] && [[ $i != 'http'* ]]; then
 				echo -e "$BLUE Directory found $YELLOW$i$RESETCOLOR"
 				dir_pending+=($1$i)
-				mkdir $i
-			else
-				spaces $i
-				echo -e -n "\b$BLUE Downloading $CYAN$i$RESERCOLOR$tabs  "
-				wget -q $root$1$i &
-				spinner
-				if [ -e $i ]
-				then
-					echo -e "$BLUE [ $GREEN OK $BLUE ] $RESETCOLOR"
-				else
-					echo -e "$BLUE [$RED Failed $BLUE] $RESETCOLOR"
+				dir_exist_check $i
+				if [ "$dir_exist" = false ]; then
+					mkdir $i
 				fi
+			elif [[ $i != 'href='* ]] && [[ $i != '/'* ]] && [[ $i == *.* ]] && [[ $i != 'http'* ]] && [[ $i != *'<' ]]; then
+				f_name=$(echo -n "$i" | sed -r 's/%20/ /g')
+				file_exist_check "$f_name"
+				if [ "$file_exist" = false ]; then
+					file_exist_check "$f_name.incomplete"
+					if [ "$file_exist" = true ]; then
+						spaces "Resuming $f_name"
+						echo -e -n "$RED Resuming $CYAN$f_name$RESERCOLOR$tabs  "
+						wget -q -c --header=$header --user-agent=$user_agent $url$i -O "$f_name.incomplete" &
+					else
+						spaces "Downloading $f_name"
+						echo -e -n "$BLUE Downloading $CYAN$f_name$RESERCOLOR$tabs  "
+						wget -q --header=$header --user-agent=$user_agent $url$i -O "$f_name.incomplete" &
+					fi
+					spinner
+					mv "$f_name.incomplete" "$f_name"
+				else
+					spaces "Completed $f_name"
+					echo -e -n "$MAGENTA Completed $CYAN$f_name$RESERCOLOR$tabs  "
+				fi
+				display_ok "$f_name"
 			fi
 		fi
 	done
-	rm index.html
+#	rm index.html
 }
 
 clear
 banner
-input
+init
 if [[ $root == */ ]]; then
 	main
 else
 	main '/'
 fi
 index=0
-while [ ${#dir_pending[@]} -gt 0 ]
-do
+while [ ${#dir_pending[@]} -gt 0 ]; do
 	d=${dir_pending[$index]}
-	cd $root_dir$d
+	cd $root_dir'/'$d
 	main $d
 	unset dir_pending[$index]
 	((index++))
