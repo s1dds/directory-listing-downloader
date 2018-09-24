@@ -6,5 +6,5 @@ A simple tool to download the complete directory listing
 foo@bar:~$ ./directory_listing_grabber.sh
 ```
 
-##Resume download
+<h2>Resume download</h2>
 Start the script in the folder containing the download data parent folder and give the same folder name to save the data in.
