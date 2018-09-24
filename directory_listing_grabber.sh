@@ -144,7 +144,13 @@ main() {
 			fi
 		fi
 	done
-#	rm index.html
+}
+
+function cleanup() {
+	cleanup_files=($(find "$root_dir" -name "index.html"))
+	for file in ${cleanup_files[@]}; do
+		rm "$file"
+	done
 }
 
 clear
@@ -163,4 +169,5 @@ while [ ${#dir_pending[@]} -gt 0 ]; do
 	unset dir_pending[$index]
 	((index++))
 done
-
+cleanup
+echo -e "$GREEN\n Download Complete!!$RESETCOLOR"
