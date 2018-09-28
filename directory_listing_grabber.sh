@@ -1,6 +1,6 @@
 #!/bin/bash
 
-#	 This program is free software: you can redistribute it and/or modify
+#    This program is free software: you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
 #    the Free Software Foundation, either version 3 of the License, or
 #    (at your option) any later version.
@@ -30,11 +30,11 @@ user_agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10.8; rv:21.0) Gecko/20100101
 function banner() {
 	echo -ne "$YELLOW"
 	printf "
-		    _                   __                
-		   | \o.__  __|_ _ ._  /__.__.|_ |_  _ ._ 
-		   |_/||(/_(_ |_(_)|\/ \_||(_||_)|_)(/_|  
+		    _                   __
+		   | \o.__  __|_ _ ._  /__.__.|_ |_  _ ._
+		   |_/||(/_(_ |_(_)|\/ \_||(_||_)|_)(/_|
 		                    /                     "
-	echo	
+	echo
 	echo -e "$RESETCOLOR"
 }
 
@@ -56,7 +56,7 @@ function init() {
 function spinner() {
 	sp=('.   ' '..  ' '... ' '....' ' ...' '  ..' '   .' '  ..' ' ...' '....' '... ' '..  ' '.   ')
 	pid=$!
-	while kill -0 $pid 2> /dev/null; 
+	while kill -0 $pid 2> /dev/null;
 	do
 		x=0
 		for ch in ${sp[@]}
@@ -72,18 +72,18 @@ function spinner() {
 function spaces() {
 	name=$1
 	len=${#name}
-	if [ $len -lt 22 ]; then
+	if [ $len -lt 24 ]; then
 		tabs='\t\t\t\t\t\t'
-	elif [ $len -gt 21 ] && [ $len -lt 31 ] ; then
+	elif [ $len -gt 23 ] && [ $len -lt 31 ] ; then
 		tabs='\t\t\t\t\t'
-	elif [ $len -gt 30 ] && [ $len -lt 38 ]; then
+	elif [ $len -gt 30 ] && [ $len -lt 39 ]; then
 		tabs='\t\t\t\t'
-	elif [ $len -gt 37 ] && [ $len -lt 47 ]; then
+	elif [ $len -gt 38 ] && [ $len -lt 47 ]; then
 		tabs='\t\t\t'
 	elif [ $len -gt 46 ] && [ $len -lt 55 ]; then
 		tabs='\t\t'
 	elif [ $len -gt 54 ] && [ $len -lt 62 ]; then
-		tabs='\t'	
+		tabs='\t'
 	else
 		tabs=''
 	fi
@@ -119,7 +119,7 @@ main() {
 	spaces "Getting info: $url"
 	echo -e -n "$WHITE Getting info: $MAGENTA$url$tabs  "
 	file_exist_check "index.html"
-	if [ "$file_exist" = false ]; then 
+	if [ "$file_exist" = false ]; then
 		wget -q --header=$header --user-agent=$user_agent $url &
 		spinner
 	fi
@@ -128,13 +128,14 @@ main() {
 	for i in "${list[@]}"; do
 		if [ $i != '../' ]; then
 			if [[ $i == */ ]] && [[ $i != /* ]] && [[ $i != 'http'* ]]; then
-				echo -e "$BLUE Directory found $YELLOW$i$RESETCOLOR"
+				dir_name=$(echo -n "$i" | sed -r 's/%20/ /g')
+				echo -e "$BLUE Directory found $YELLOW$dir_name$RESETCOLOR"
 				dir_pending+=($1$i)
 				dir_exist_check $i
 				if [ "$dir_exist" = false ]; then
 					mkdir $i
 				fi
-			elif [[ $i != 'href='* ]] && [[ $i != '/'* ]] && [[ $i == *.* ]] && [[ $i != 'http'* ]] && [[ $i != *'<' ]]; then
+			elif [[ $i == *.* ]] && [[ $i != '/'* ]] && [[ $i != 'href='* ]] && [[ $i != 'http'* ]] && [[ $i != *'<' ]] && [[ $i != '<'* ]]; then
 				f_name=$(echo -n "$i" | sed -r 's/%20/ /g')
 				file_exist_check "$f_name"
 				if [ "$file_exist" = false ]; then
@@ -149,7 +150,7 @@ main() {
 						wget -q --header=$header --user-agent=$user_agent $url$i -O "$f_name.incomplete" &
 					fi
 					spinner
-					mv "$f_name.incomplete" "$f_name"
+					mv "$f_name.incomplete" "$f_name" 2>/dev/null
 				else
 					spaces "Completed $f_name"
 					echo -e -n "$MAGENTA Completed $CYAN$f_name$RESERCOLOR$tabs  "
