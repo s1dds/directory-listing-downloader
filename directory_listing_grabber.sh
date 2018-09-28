@@ -126,16 +126,16 @@ main() {
 	display_ok "index.html"
 	list=($(grep "href=" index.html | cut -d '"' -f 2))
 	for i in "${list[@]}"; do
-		if [ $i != '../' ]; then
-			if [[ $i == */ ]] && [[ $i != /* ]] && [[ $i != 'http'* ]]; then
+		if [ $i != '../' ] && [[ $i != '/'* ]] && [[ $i != 'href='* ]] && [[ $i != 'http'* ]] && [[ $i != *'<'* ]] && [[ $i != '<'* ]]; then
+			if [[ $i == */ ]]; then
 				dir_name=$(echo -n "$i" | sed -r 's/%20/ /g')
 				echo -e "$BLUE Directory found $YELLOW$dir_name$RESETCOLOR"
 				dir_pending+=($1$i)
-				dir_exist_check $i
+				dir_exist_check "$dir_name"
 				if [ "$dir_exist" = false ]; then
-					mkdir $i
+					mkdir "$dir_name"
 				fi
-			elif [[ $i == *.* ]] && [[ $i != '/'* ]] && [[ $i != 'href='* ]] && [[ $i != 'http'* ]] && [[ $i != *'<' ]] && [[ $i != '<'* ]]; then
+			elif [[ $i == *.* ]]; then
 				f_name=$(echo -n "$i" | sed -r 's/%20/ /g')
 				file_exist_check "$f_name"
 				if [ "$file_exist" = false ]; then
